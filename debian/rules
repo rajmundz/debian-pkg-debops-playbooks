@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE=1
+
+%:
+	dh $@
+
+override_dh_installchangelogs:
+	mkdir -v debian/tmp
+	pandoc -f rst -t plain -o debian/tmp/CHANGELOG CHANGELOG.rst
+	dh_installchangelogs debian/tmp/CHANGELOG

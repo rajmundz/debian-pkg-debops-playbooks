@@ -1,0 +1,24 @@
+Source: debops-playbooks
+Section: admin
+Priority: optional
+Maintainer: Daniel Stender <stender@debian.org>
+Build-Depends: debhelper (>= 9), pandoc
+Standards-Version: 3.9.7
+Homepage: http://debops.org/
+
+Package: debops-playbooks
+Architecture: all
+Depends: ${misc:Depends}
+Recommends: ansible, debops
+Description: Ansible playbooks and roles for Debian servers
+ DebOps is a administration framework for setting up remote Debian servers
+ which is based on the configuration management system Ansible. For that
+ purpose the project features a large collection of several refined Ansible
+ scripts (playbooks and roles). With them a multitude of different services
+ could be set up on one or a number of remote servers in the same run most
+ conveniently. The scripts are written in a modular fashion and could be
+ combined differently, as needed.
+ .
+ This package contains the collection of Ansible playbooks and rules of the
+ project. The scripts could be used with Ansible directly, but however, it's
+ recommended to use them with the convenience scripts in the package debops.

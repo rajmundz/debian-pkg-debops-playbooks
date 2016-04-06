@@ -1,0 +1,2 @@
+playbooks/ /usr/share/debops-playbooks
+roles/ /usr/share/debops-playbooks
