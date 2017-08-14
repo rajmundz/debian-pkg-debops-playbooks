@@ -1,7 +1,7 @@
 Source: debops-playbooks
 Section: admin
 Priority: optional
-Maintainer: Rajmund Zawislak <rajmund.zawislak@gmail.com>
+Maintainer: Rajmund Zawiślak <rajmund.zawislak@gmail.com>
 Build-Depends: debhelper (>= 9), pandoc
 Standards-Version: 3.9.7
 Vcs-Browser: https://github.com/rajmundz/debian-pkg-debops.git
