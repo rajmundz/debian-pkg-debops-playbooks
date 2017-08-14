@@ -1,0 +1,62 @@
+---
+
+- name: Install required packages
+  apt:
+    pkg: '{{ item }}'
+    state: 'latest'
+    install_recommends: False
+  with_flattened:
+    - gitlab_ci_packages
+    - gitlab_ci_database_packages[gitlab_ci_database]
+
+- name: Create GitLab CI system group
+  group:
+    name: '{{ gitlab_ci_group }}'
+    system: True
+    state: 'present'
+
+- name: Create GitLab CI user
+  user:
+    name: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    home: '{{ gitlab_ci_home }}'
+    comment: 'GitLab CI'
+    state: 'present'
+    append: False
+    system: True
+
+- name: Secure GitLab CI home directory
+  file:
+    path: '{{ gitlab_ci_home }}'
+    state: 'directory'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0750'
+
+- name: Allow access to GitLab CI home by the webserver
+  acl:
+    name: '{{ gitlab_ci_home }}'
+    entity: 'www-data'
+    etype: 'group'
+    permissions: 'x'
+    state: 'present'
+  when: gitlab_ci_support_filesystem_acl
+
+- include: configure_gitlab-ci.yml
+
+- name: Make sure Ansible Facts directory exists
+  file:
+    path: '/etc/ansible/facts.d'
+    state: 'directory'
+    owner: 'root'
+    group: 'root'
+    mode: '0755'
+
+- name: Save information about GitLab CI in Ansible Facts
+  template:
+    src: 'etc/ansible/facts.d/gitlab_ci.fact.j2'
+    dest: '/etc/ansible/facts.d/gitlab_ci.fact'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+

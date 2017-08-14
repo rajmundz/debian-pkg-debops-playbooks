@@ -1,0 +1,12 @@
+{
+{% if ((ansible_local is defined and ansible_local.gitlab_ci_runner is defined and
+        ansible_local.gitlab_ci_runner.registered is defined and
+        ansible_local.gitlab_ci_runner.registered) or
+       (gitlab_ci_runner_register_instance is defined and
+        gitlab_ci_runner_register_instance.stdout is defined and
+        gitlab_ci_runner_register_instance.stdout)) %}
+"registered": "true",
+{% endif %}
+"installed": "true",
+"version": "{{ gitlab_ci_runner_version }}"
+}

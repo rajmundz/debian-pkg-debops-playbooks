@@ -1,0 +1,79 @@
+---
+
+- name: Combine /etc/services inventory lists
+  set_fact:
+    ## `etc_services_[^_].*` is deprecated!
+    etc_services_list_combined: '{{
+      etc_services_list            | d([]) | list +
+      etc_services_group_list      | d([]) | list +
+      etc_services_host_list       | d([]) | list +
+      etc_services_dependency_list | d([]) | list +
+      etc_services_dependent_list  | d([]) | list +
+      etc_services__list           | list +
+      etc_services__group_list     | list +
+      etc_services__host_list      | list +
+      etc_services__dependent_list | list
+    }}'
+
+- name: Make sure /etc/services.d directory exists
+  file:
+    path:  '/etc/services.d'
+    state: 'directory'
+    owner: 'root'
+    group: 'root'
+    mode:  '0755'
+
+- name: Create /etc/services.d/00_ansible
+  template:
+    src:  'etc/services.d/00_ansible.j2'
+    dest: '/etc/services.d/00_ansible'
+    owner: 'root'
+    group: 'root'
+    mode:  '0644'
+
+- name: Divert original /etc/services
+  command: dpkg-divert --quiet --local --divert "{{ etc_services__diversion }}" --rename "/etc/services"
+  args:
+    creates: '{{ etc_services__diversion }}'
+  when: etc_services__enabled|bool
+
+- name: Generate list of local services if requested
+  template:
+    src:  'etc/services.d/local_service.j2'
+    dest: '/etc/services.d/{{ item.filename | default("20_local_service_" + item.name) }}'
+    owner: 'root'
+    group: 'root'
+    mode:  '0644'
+  with_flattened: '{{ etc_services_list_combined }}'
+  when: etc_services__enabled|bool and ((item.name|d() and item.port|d()) or item.custom|d())
+
+- name: Remove list of local services if requested
+  file:
+    path: '/etc/services.d/{{ item.filename | default("20_local_service_" + item.name) }}'
+    state: 'absent'
+  with_flattened: '{{ etc_services_list_combined }}'
+  when: ((not etc_services__enabled|bool) or item.delete|d()) and ((item.name|d() and item.port|d()) or item.custom|d())
+
+- name: Assemble services.d
+  assemble:
+    src:  '/etc/services.d'
+    dest: '/etc/services'
+    backup: False
+    owner: 'root'
+    group: 'root'
+    mode:  '0644'
+  when: etc_services__enabled|bool
+
+- name: Remove current /etc/services before removing the diversion
+  command: rm -f /etc/services
+  args:
+    removes: '{{ etc_services__diversion }}'
+    warn: False
+  when: not etc_services__enabled|bool
+
+- name: Remove diversion of /etc/services
+  command: dpkg-divert --quiet --local --rename --remove /etc/services
+  args:
+    removes: '{{ etc_services__diversion }}'
+  when: not etc_services__enabled|bool
+

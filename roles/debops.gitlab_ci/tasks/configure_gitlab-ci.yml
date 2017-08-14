@@ -1,0 +1,214 @@
+---
+
+# ---- GitLab CI code clone and checkout ----
+
+- name: Clone GitLab CI source code
+  git:
+    repo: '{{ gitlab_ci_git_repo }}'
+    dest: '{{ gitlab_ci_git_dest }}'
+    bare: True
+    update: True
+  sudo_user: '{{ gitlab_ci_user }}'
+  register: gitlab_ci_register_source
+
+- name: Check if GitLab CI is checked out
+  stat:
+    path: '{{ gitlab_ci_git_checkout }}'
+  register: gitlab_ci_register_directory
+
+- name: Create GitLab CI checkout directory
+  file:
+    path: '{{ gitlab_ci_git_checkout }}'
+    state: 'directory'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0755'
+
+- name: Prepare GitLab CI worktree
+  copy:
+    content: 'gitdir: {{ gitlab_ci_git_dest }}'
+    dest: '{{ gitlab_ci_git_checkout + "/.git" }}'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0644'
+
+- name: Get commit hash of target checkout
+  shell: GIT_WORK_TREE={{ gitlab_ci_git_checkout }} git rev-parse {{ gitlab_ci_version_map[gitlab_ci_version] }}
+         chdir={{ gitlab_ci_git_dest }}
+  sudo_user: '{{ gitlab_ci_user }}'
+  register: gitlab_ci_register_target_branch
+  changed_when: gitlab_ci_register_target_branch.stdout != gitlab_ci_register_source.before
+
+- include: gitlab_ci_pre_upgrade.yml
+  when: ((ansible_local is defined and ansible_local.gitlab_ci is defined and
+          ansible_local.gitlab_ci.installed is defined and ansible_local.gitlab_ci.installed) and
+         ((gitlab_ci_register_target_branch.stdout != gitlab_ci_register_source.before) or
+         (ansible_local.gitlab_ci.version is defined and ansible_local.gitlab_ci.version != gitlab_ci_version)))
+
+- name: Checkout GitLab CI
+  shell: GIT_WORK_TREE={{ gitlab_ci_git_checkout }} git checkout -f {{ gitlab_ci_version_map[gitlab_ci_version] }}
+         chdir={{ gitlab_ci_git_dest }}
+  sudo_user: '{{ gitlab_ci_user }}'
+  register: gitlab_ci_register_checkout
+  when: (gitlab_ci_register_source.before is undefined or
+         (gitlab_ci_register_source.before is defined and
+          gitlab_ci_register_target_branch.stdout is defined and
+          gitlab_ci_register_source.before != gitlab_ci_register_target_branch.stdout))
+
+- name: Manage other GitLab CI directories
+  file:
+    path: '{{ gitlab_ci_git_checkout + "/" + item }}'
+    state: 'directory'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0755'
+  with_items: [ 'tmp', 'tmp/sockets', 'tmp/pids' ]
+
+
+# ---- GitLab CI database configuration ----
+
+- name: Set default database password
+  set_fact:
+    gitlab_ci_database_password: ""
+
+- name: Get database password from MySQL secrets
+  set_fact:
+    gitlab_ci_database_password: '{{ lookup("password",secret + "/credentials/" + ansible_fqdn + "/mysql/" + gitlab_ci_database_config[gitlab_ci_database].username + "/password") }}'
+  when: (secret is defined and secret) and (gitlab_ci_database is defined and gitlab_ci_database and gitlab_ci_database == 'mysql')
+
+- name: Get PostgreSQL database password
+  set_fact:
+    gitlab_ci_postgresql_database_password: '{{ lookup("password",secret + "/credentials/" + ansible_fqdn + "/gitlab-ci/postgresql/" + gitlab_ci_database_config[gitlab_ci_database].username + "/password") }}'
+  when: (secret is defined and secret) and (gitlab_database is defined and gitlab_database and gitlab_database == 'postgresql')
+
+- name: Configure GitLab CI database configuration
+  template:
+    src: 'var/local/gitlab-ci/gitlab-ci/config/database.{{ gitlab_ci_database }}.yml.j2'
+    dest: '{{ gitlab_ci_git_checkout + "/config/database.yml" }}'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0644'
+  notify: [ 'Restart gitlab-ci' ]
+
+- name: Create PostgreSQL role if PostgreSQL enabled
+  postgresql_user:
+    name: '{{ gitlab_ci_database_config[gitlab_ci_database].username }}'
+    password: '{{ gitlab_ci_postgresql_database_password }}'
+    encrypted: False
+    port: '{{ gitlab_ci_database_config[gitlab_ci_database].port }}'
+    state: 'present'
+  sudo_user: 'postgres'
+  when: gitlab_ci_database is defined and gitlab_ci_database == 'postgresql'
+
+- name: Create PostgreSQL database if PostgreSQL enabled
+  postgresql_db:
+    name: '{{ gitlab_ci_database_config[gitlab_ci_database].database }}'
+    owner: '{{ gitlab_ci_database_config[gitlab_ci_database].username }}'
+    port: '{{ gitlab_ci_database_config[gitlab_ci_database].port }}'
+    state: 'present'
+    template: 'template1'
+  sudo_user: 'postgres'
+  when: gitlab_ci_database is defined and gitlab_ci_database == 'postgresql'
+
+
+# ---- GitLab CI configuration files and scripts ----
+
+- name: Setup GitLab CI main configuration
+  template:
+    src: 'var/local/gitlab-ci/gitlab-ci/config/application.yml.j2'
+    dest: '{{ gitlab_ci_git_checkout + "/config/application.yml" }}'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0600'
+  notify: [ 'Restart gitlab-ci' ]
+
+- name: Setup GitLab CI unicorn configuration
+  template:
+    src: 'var/local/gitlab-ci/gitlab-ci/config/unicorn.rb.j2'
+    dest: '{{ gitlab_ci_git_checkout + "/config/unicorn.rb" }}'
+    owner: '{{ gitlab_ci_user }}'
+    group: '{{ gitlab_ci_group }}'
+    mode: '0644'
+  notify: [ 'Restart gitlab-ci' ]
+
+- name: Setup GitLab CI init script configuration
+  template:
+    src: 'etc/default/gitlab-ci.j2'
+    dest: '/etc/default/gitlab-ci'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  notify: [ 'Restart gitlab-ci' ]
+
+- name: Install GitLab CI service script
+  shell: cp -f {{ gitlab_ci_git_checkout }}/lib/support/init.d/gitlab_ci /etc/init.d/gitlab-ci
+  when: gitlab_ci_register_checkout is defined and gitlab_ci_register_checkout.changed
+
+- name: Enable GitLab CI service
+  service:
+    name: 'gitlab-ci'
+    enabled: True
+  when: gitlab_ci_register_checkout is defined and gitlab_ci_register_checkout.changed
+
+- name: Setup GitLab CI logrotate configuration
+  template:
+    src: 'etc/logrotate.d/gitlab-ci.j2'
+    dest: '/etc/logrotate.d/gitlab-ci'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+
+# ---- GitLab CI main setup ----
+
+- include: patch_gitlab-ci.yml
+  when: gitlab_ci_patch is defined and gitlab_ci_patch
+
+- name: Update Ruby gems
+  shell: bundle install --deployment --without {{ gitlab_ci_bundle_install_without[gitlab_ci_database] }}
+         chdir={{ gitlab_ci_git_checkout }}
+  sudo_user: '{{ gitlab_ci_user }}'
+  notify: [ 'Restart gitlab-ci' ]
+  when: gitlab_ci_register_checkout is defined and gitlab_ci_register_checkout.changed
+
+- name: Initialize GitLab CI database
+  shell: yes 'yes' | bundle exec rake setup RAILS_ENV=production
+         chdir={{ gitlab_ci_git_checkout }}
+  sudo_user: '{{ gitlab_ci_user }}'
+  register: gitlab_ci_register_bundle_setup
+  when: ((ansible_local is undefined or (ansible_local is defined and
+          (ansible_local.gitlab_ci is undefined or (ansible_local.gitlab_ci is defined and
+           (ansible_local.gitlab_ci.installed is undefined or (ansible_local.gitlab_ci.installed is defined and
+            not ansible_local.gitlab_ci.installed)))))) and
+         gitlab_ci_register_checkout is defined and gitlab_ci_register_checkout.changed)
+
+- name: Migrate GitLab CI database
+  shell: bundle exec rake db:migrate RAILS_ENV=production
+         chdir={{ gitlab_ci_git_checkout }}
+  sudo_user: '{{ gitlab_ci_user }}'
+  register: gitlab_ci_register_bundle_migrate
+  notify: [ 'Restart gitlab-ci' ]
+  when: ((ansible_local is defined and ansible_local.gitlab_ci is defined and
+          ansible_local.gitlab_ci.installed) and
+         gitlab_ci_register_checkout is defined and gitlab_ci_register_checkout.changed)
+
+- name: Configure GitLab CI schedules
+  shell: yes 'yes' | bundle exec whenever -w RAILS_ENV=production
+         chdir={{ gitlab_ci_git_checkout }}
+  sudo_user: '{{ gitlab_ci_user }}'
+  when: ((ansible_local is undefined or (ansible_local is defined and
+          (ansible_local.gitlab_ci is undefined or (ansible_local.gitlab_ci is defined and
+           (ansible_local.gitlab_ci.installed is undefined or (ansible_local.gitlab_ci.installed is defined and
+            not ansible_local.gitlab_ci.installed)))))) and
+         gitlab_ci_register_checkout is defined and gitlab_ci_register_checkout.changed)
+
+- name: Start GitLab CI instance
+  service:
+    name: 'gitlab-ci'
+    state: 'started'
+  notify: [ 'Deactivate gitlab-ci deploy.html page' ]
+  when: (ansible_local is undefined or (ansible_local is defined and
+         (ansible_local.gitlab_ci is undefined or (ansible_local.gitlab_ci is defined and
+          (ansible_local.gitlab_ci.installed is undefined or (ansible_local.gitlab_ci.installed is defined and
+           not ansible_local.gitlab_ci.installed))))))
+

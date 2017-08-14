@@ -1,0 +1,37 @@
+---
+
+ansigenome_info:
+  github_url: "https://github.com/debops/ansible-backporter"
+  git_branch: "master"
+  galaxy_id: "1554"
+
+  travis: True
+
+  license_url: 'https://tldrlegal.com/license/gnu-general-public-license-v3-(gpl-3)'
+
+  authors:
+    - name:  'Maciej Delmanowski'
+      url: ''
+      email: 'drybjed@gmail.com'
+      twitter: 'drybjed'
+      github: 'drybjed'
+
+  synopsis: |
+    This is a helper Ansible role which allows you to ensure that Debian
+    packages with certain versions are available on your hosts. If requested
+    version is not available in currently configured APT repositories (for
+    example `wheezy` and `wheezy-backports` from official Debian archives),
+    `backporter`, if properly configured, will try to build and install
+    required version from `testing` repository.
+    
+    If successful, newly built backported packages will be uploaded to Ansible
+    Controller host which then can make these packages available to the rest of the
+    Ansible cluster using `debops.reprepro` role to create and maintain local APT
+    repository.
+    
+    `debops.backporter` role is based on instructions from
+    [Simple Backport Creation HOWTO](https://wiki.debian.org/SimpleBackportCreation).
+    `rmadison` utility from `devscripts` package is used to check available
+    Debian packages, and depends on availability of
+    [Debian QA Madison](https://qa.debian.org/madison.php) service.
+

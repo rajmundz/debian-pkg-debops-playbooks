@@ -1,0 +1,8 @@
+---
+
+  ## Now configured via subnetwork__ferm__dependent_rules.
+- name: Remove obsolet file ferm configuration file
+  file:
+    path: '/etc/ferm/ferm.d/subnetwork_{{ subnetwork__iface }}.conf'
+    state: 'absent'
+  notify: [ 'Restart ferm' ]

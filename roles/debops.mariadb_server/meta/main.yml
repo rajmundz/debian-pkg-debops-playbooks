@@ -1,0 +1,49 @@
+---
+
+dependencies:
+
+  - role: debops.secret
+    tags: [ 'depend::secret', 'depend::secret:mariadb_server', 'depend-of::mariadb_server', 'type::dependency:hard' ]
+
+  - role: debops.ferm
+    tags: [ 'depend::ferm', 'depend::ferm:mariadb_server', 'depend-of::mariadb_server', 'type::dependency' ]
+    ferm_input_list:
+
+      - type: 'dport_accept'
+        dport: [ 'mysql' ]
+        saddr: '{{ mariadb_server_allow }}'
+        weight: '50'
+        filename: 'mariadb_dependency_accept'
+
+  - role: debops.tcpwrappers
+    tags: [ 'depend::tcpwrappers', 'depend::tcpwrappers:mariadb_server', 'depend-of::mariadb_server', 'type::dependency' ]
+    tcpwrappers_allow:
+
+      - daemon: 'mysqld'
+        client: '{{ mariadb_server_allow }}'
+        weight: '50'
+        filename: 'mariadb_dependency_allow'
+        comment: 'Allow remote connections to MariaDB / MySQL server'
+
+galaxy_info:
+  author: 'Maciej Delmanowski'
+  description: 'Install and manage a MariaDB / MySQL server'
+  company: 'DebOps'
+  license: 'GNU General Public License v3'
+  min_ansible_version: '1.8.0'
+  platforms:
+  - name: Ubuntu
+    versions:
+    - precise
+    - quantal
+    - raring
+    - saucy
+    - trusty
+  - name: Debian
+    versions:
+    - wheezy
+    - jessie
+  categories:
+  - 'database:sql'
+  - 'system'
+

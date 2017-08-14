@@ -1,0 +1,76 @@
+---
+
+# ---- Basic options ----
+
+# Should GitLab CI role manage it's own dependencies (database, web server)?
+gitlab_ci_dependencies: True
+
+# What version of GitLab CI to install / manage
+gitlab_ci_version: '5.4'
+
+
+# ---- GitLab integration ----
+
+# URL of GitLab instance
+gitlab_ci_gitlab_server: 'https://code.{{ ansible_domain }}/'
+
+# GitLab app id configured in GitLab OAuth
+gitlab_ci_gitlab_app_id: '{{ lookup("password", secret + "/credentials/" + ansible_fqdn + "/gitlab_ci/gitlab_app_id length=0") }}'
+
+# GitLab app secret configured in GitLab OAuth
+gitlab_ci_gitlab_app_secret: '{{ lookup("password", secret + "/credentials/" + ansible_fqdn + "/gitlab_ci/gitlab_app_secret length=0") }}'
+
+
+# ---- GitLab CI instance configuration ----
+
+# What database to use for GitLab CI instnce? Choices: mysql, postgresql
+gitlab_ci_database: 'mysql'
+
+# Domain which will be used for nginx server
+# GitLab CI will be configured with HTTPS enabled by default
+gitlab_ci_domain: [ 'ci.{{ ansible_domain }}' ]
+
+# E-mail sender name used by GitLab CI
+gitlab_ci_email_name: 'GitLab CI'
+
+# E-mail address used by GitLab CI
+gitlab_ci_email_from: 'gitlab-ci@{{ ansible_domain }}'
+
+# E-mail address for GitLab CI support
+gitlab_ci_email_support: 'root@{{ ansible_domain }}'
+
+
+# ---- Internal application settings ----
+
+# Patch GitLab CI source (see tasks/patch_gitlab-ci.yml)
+gitlab_ci_patch: True
+
+# Connection type for PostgreSQL database (choices: socket, port)
+gitlab_ci_postgresql_database_connection: 'socket'
+
+# nginx client_max_body_size value
+gitlab_ci_nginx_client_max_body_size: '5m'
+
+# nginx - gitlab proxy timeout in seconds
+gitlab_ci_nginx_proxy_timeout: '300'
+
+# unicorn connection timeout in seconds
+gitlab_ci_unicorn_timeout: '30'
+
+
+# ---- System configuration ----
+
+# System user, group and home directory
+gitlab_ci_user: 'gitlab-ci'
+gitlab_ci_group: 'gitlab-ci'
+gitlab_ci_home: '/var/local/{{ gitlab_ci_user }}'
+
+# Unicorn port on localhost interface for GitLab CI
+gitlab_ci_unicorn_port: '18083'
+
+
+# ---- Compatibility workarounds ----
+
+# Enable or disable ACL configuration for the webserver
+gitlab_ci_support_filesystem_acl: True
+

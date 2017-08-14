@@ -1,0 +1,15 @@
+---
+
+- name: Restart gitlab-ci
+  service:
+    name: 'gitlab-ci'
+    state: 'restarted'
+  notify: [ 'Deactivate gitlab-ci deploy.html page' ]
+  when: (ansible_local is defined and ansible_local.gitlab_ci is defined and
+         ansible_local.gitlab_ci.installed is defined and ansible_local.gitlab_ci.installed)
+
+- name: Deactivate gitlab-ci deploy.html page
+  file:
+    path: '{{ gitlab_ci_git_checkout + "/public/index.html" }}'
+    state: 'absent'
+

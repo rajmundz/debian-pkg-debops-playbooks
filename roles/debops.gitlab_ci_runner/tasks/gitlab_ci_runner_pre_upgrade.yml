@@ -1,0 +1,7 @@
+---
+
+- name: Stop GitLab CI Runner before upgrade
+  service:
+    name: 'gitlab-ci-runner'
+    state: 'stopped'
+

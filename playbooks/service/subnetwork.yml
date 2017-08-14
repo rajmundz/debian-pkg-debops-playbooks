@@ -1,0 +1,21 @@
+---
+
+- name: Configure internal networks
+  hosts: [ 'debops_service_subnetwork', 'debops_subnetwork' ]
+  become: True
+
+  roles:
+
+    - role: debops.ifupdown
+      tags: [ 'role::ifupdown' ]
+      ifupdown_dependent_interfaces: '{{ subnetwork__ifupdown__dependent_list }}'
+
+    - role: debops.ferm
+      tags: [ 'role::ferm' ]
+      ferm_forward: '{{ subnetwork__kernel_forwarding|d() | bool }}'
+      ferm__dependent_rules:
+        - '{{ subnetwork__ferm__dependent_rules }}'
+
+    - role: debops.subnetwork
+      tags: [ 'role::subnetwork' ]
+

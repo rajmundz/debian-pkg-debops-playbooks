@@ -1,0 +1,18 @@
+---
+
+- name: Create custom directories
+  file:
+    path:   '{{ item.path }}'
+    state:  '{{ item.state  | default("directory") }}'
+    owner:  '{{ item.owner  | default("root") }}'
+    group:  '{{ item.group  | default("root") }}'
+    mode:   '{{ item.mode   | default("0755") }}'
+    follow: '{{ item.follow | default(omit) }}'
+    force:  '{{ item.force  | default(omit) }}'
+    src:    '{{ item.src    | default(omit) }}'
+  with_flattened:
+    - '{{ directories_list }}'
+    - '{{ directories_group_list }}'
+    - '{{ directories_host_list }}'
+  when: (item.path is defined and item.path)
+

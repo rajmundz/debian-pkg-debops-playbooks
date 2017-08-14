@@ -1,0 +1,19 @@
+---
+
+- include: swapfile.yml
+
+- include: gitusers.yml
+
+- include: sftpusers.yml
+
+- include: slapd.yml
+
+- include: lvm.yml
+
+- include: iscsi.yml
+
+- include: cryptsetup.yml
+
+- include: nfs.yml
+
+

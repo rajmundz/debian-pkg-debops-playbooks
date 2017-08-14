@@ -1,0 +1,93 @@
+---
+
+# ---- GitLab CI source ----
+
+# Address of the official GitLab CI git repository to use
+gitlab_ci_git_repo: 'https://gitlab.com/gitlab-org/gitlab-ci.git'
+
+# Directory where GitLab CI source will be cloned to
+gitlab_ci_git_dest: '{{ gitlab_ci_home + "/src/" + gitlab_ci_git_repo.split("://")[1] }}'
+
+# Directory where GitLab CI will be checked out (application directory)
+gitlab_ci_git_checkout: '{{ gitlab_ci_home + "/gitlab-ci" }}'
+
+# Mapping of "official" version to git branches of GitLab CI
+# Using git branches instead of tags lets you apply updates to the particular
+# release automatically
+gitlab_ci_version_map:
+  '5.1': '5-1-stable'
+  '5.2': '5-2-stable'
+  '5.3': '5-3-stable'
+  '5.4': '5-4-stable'
+
+
+# ---- GitLab CI installation ----
+
+# Arguments to use with 'bundle install' for different database servers
+gitlab_ci_bundle_install_without:
+  'mysql':      'development test postgres'
+  'postgresql': 'development test mysql'
+
+
+# ---- Database ----
+
+# GitLab CI MySQL database configuration. Password will be empty by default, or
+# retrieved from "secret" directory, if it is enabled
+gitlab_ci_database_config:
+  mysql:
+    hostname: 'localhost'
+    username: 'gitlab-ci'
+    database: 'gitlab_ci_production'
+  postgresql:
+    hostname: 'localhost'
+    username: 'gitlab-ci'
+    database: 'gitlab_ci_production'
+    socket:   '/var/run/postgresql'
+    port:     '5432'
+
+# List of APT packages required by GitLab CI
+gitlab_ci_packages: [ 'build-essential', 'libxml2-dev', 'libxslt1-dev', 'libcurl4-openssl-dev',
+                      'libreadline6-dev', 'libc6-dev', 'libssl-dev', 'make', 'zlib1g-dev',
+                      'libyaml-dev', 'libicu-dev' ]
+
+# List of additional APT packages required by a particular database
+gitlab_ci_database_packages:
+  mysql:      [ 'libmysqlclient-dev', 'ruby-mysql', 'libmysql++-dev' ]
+  postgresql: [ 'libpq-dev', 'ruby-pg' ]
+
+# ---- Web server ----
+
+# nginx upstream configuration for gitlab service
+gitlab_ci_nginx_upstream:
+  enabled: True
+  name: 'gitlab-ci'
+  server: 'unix:{{ gitlab_ci_git_checkout }}/tmp/sockets/gitlab-ci.socket'
+
+# nginx server configuration for GitLab
+gitlab_ci_nginx_server:
+  by_role: 'debops.gitlab_ci'
+  enabled: True
+  default: False
+  name: '{{ gitlab_ci_domain }}'
+  root: '{{ gitlab_ci_git_checkout }}/public'
+
+  options: |
+    client_max_body_size {{ gitlab_ci_nginx_client_max_body_size }};
+    error_page 502 /502.html;
+
+  location:
+    '/': |
+      try_files $uri $uri/index.html $uri.html @gitlab_ci;
+
+    '@gitlab_ci': |
+      gzip off;
+      proxy_read_timeout {{ gitlab_ci_nginx_proxy_timeout }};
+      proxy_connect_timeout {{ gitlab_ci_nginx_proxy_timeout }};
+      proxy_redirect     off;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_set_header   Host              $http_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_pass         http://gitlab-ci;
+
+

@@ -1,0 +1,46 @@
+---
+
+# ---- MySQL integration ----
+
+- name: Manage MySQL access
+  mysql_user:
+    name: '{{ gitlab_ci_runner_services_mysql_user }}'
+    password: '{{ gitlab_ci_runner_services_mysql_password }}'
+    state: 'present'
+    priv: '{{ gitlab_ci_runner_services_mysql_priv }}'
+    append_privs: 'no'
+    host: '{% if gitlab_ci_runner_services_mysql_host == "localhost" %}localhost{% else %}{{ ansible_fqdn }}{% endif %}'
+  delegate_to: '{% if gitlab_ci_runner_services_mysql_host == "localhost" %}{{ inventory_hostname }}{% else %}{{ gitlab_ci_runner_services_mysql_host }}{% endif %}'
+  when: (gitlab_ci_runner_services is defined and
+         "mysql" in gitlab_ci_runner_services)
+
+- name: Configure GitLab CI Runner MySQL access if enabled
+  template:
+    src: 'var/local/gitlab-ci-runner/my.cnf.j2'
+    dest: '~/.my.cnf'
+    mode: '0640'
+  sudo_user: '{{ gitlab_ci_runner_user }}'
+  when: (gitlab_ci_runner_services is defined and
+         "mysql" in gitlab_ci_runner_services)
+
+
+# ---- sudo integration ----
+
+- name: Configure access to root via sudo if enabled
+  template:
+    src: 'etc/sudoers.d/gitlab-ci-runner.j2'
+    dest: '/etc/sudoers.d/gitlab-ci-runner'
+    owner: 'root'
+    group: 'root'
+    mode: '0440'
+  when: (gitlab_ci_runner_services is defined and
+         "sudo" in gitlab_ci_runner_services)
+
+- name: Disallow access to root via sudo if not enabled
+  file:
+    path: '/etc/sudoers.d/gitlab-ci-runner'
+    state: 'absent'
+  when: (gitlab_ci_runner_services is undefined or
+         (gitlab_ci_runner_services is defined and
+         not "sudo" in gitlab_ci_runner_services))
+

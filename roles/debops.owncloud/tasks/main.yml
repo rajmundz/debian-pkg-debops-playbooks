@@ -1,0 +1,34 @@
+---
+
+- name: Get ownCloud APT GPG key
+  apt_key:
+    url: '{{ owncloud_apt_repo_key_url }}'
+    id: '{{ owncloud_apt_repo_key_id }}'
+    state: present
+  tags: [ 'role::owncloud:base_install' ]
+
+- name: Configure ownCloud APT repository
+  apt_repository:
+    repo: '{{ owncloud_apt_repo_source }}'
+    state: present
+    update_cache: True
+  tags: [ 'role::owncloud:base_install' ]
+
+- name: Ensure owncloud packages are installed
+  apt:
+    name: '{{ item }}'
+    state: 'present'
+    install_recommends: False
+  with_flattened:
+    - '{{ owncloud_base_packages }}'
+    - '{{ [ "php5-mysql" ] if (owncloud_database in [ "mariadb" ]) else [] }}'
+    - '{{ [ "php5-pgsql" ] if (owncloud_database in [ "postgresql" ]) else [] }}'
+  tags: [ 'role::owncloud:base_install' ]
+
+- include: configure_owncloud.yml
+  tags: [ 'role::owncloud:configure' ]
+
+- include: configure_ldap.yml
+  when: owncloud_ldap_enable
+  tags: [ 'role::owncloud:ldap' ]
+

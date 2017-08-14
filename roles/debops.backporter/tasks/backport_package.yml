@@ -1,0 +1,163 @@
+---
+
+- name: Add APT source repositories
+  apt_repository: repo='{{ item }}' state=present update_cache=yes
+  with_items: backporter_repositories
+
+- name: Install packages required for a build
+  apt: pkg={{ item }} state=latest install_recommends=no
+  with_flattened:
+    - '{{ backporter_sdk_packages }}'
+    - '{{ backporter_prerequisites }}'
+
+- name: Check if Debian QA Madison service is available
+  uri: url=https://qa.debian.org/madison.php follow_redirects=safe method=GET
+       status_code=200,302 timeout=5
+  register: backporter_register_rmadison_service
+  ignore_errors: True
+
+- name: Find available package version
+  shell: rmadison {{ backporter_package }} --suite {{ backporter_build_codename }} | grep {{ backporter_package }} | head -n 1 | awk '{print $3}' | sed -e 's/^.*://'
+  register: backporter_register_dsc_version
+  when: (backporter_register_rmadison_service is defined and
+         (backporter_register_rmadison_service.status is defined and
+          backporter_register_rmadison_service.status))
+
+- name: Set available package version using fallback
+  set_fact:
+    backporter_register_dsc_version:
+      stdout: '{{ backporter_source_version }}'
+  when: ((backporter_register_rmadison_service is defined and
+         backporter_register_rmadison_service.failed) and
+        (backporter_source_version is defined and backporter_source_version))
+
+- name: Fail if source package version is not defined
+  fail: msg="backporter_source_version not defined, check version on https://packages.debian.org/source/{{ backporter_next[backporter_release] + '/' + backporter_source_package }}"
+  when: (backporter_register_dsc_version is undefined) or
+        (backporter_register_dsc_version is defined and
+         (backporter_register_dsc_version.changed is defined and
+          not backporter_register_dsc_version.changed))
+
+- name: Derive build directory from available version
+  set_fact: backporter_build_root={{ backporter_build_path + '/' + backporter_package + '/' + backporter_package +'_' + backporter_register_dsc_version.stdout }}
+
+- name: Create build directory
+  file: path={{ backporter_build_root }} state=directory owner=root group=root mode=0755
+
+- name: Download package sources
+  command: >
+            {{ backporter_command_dget }} {{ backporter_source_path }}_{{ backporter_register_dsc_version.stdout }}.dsc
+            creates={{ backporter_build_root }}/{{ backporter_source_package }}_{{ backporter_register_dsc_version.stdout }}.dsc
+            chdir={{ backporter_build_root }}
+  register: backporter_register_source_download
+
+- name: Find name of downloaded .orig.tar.xz package
+  shell: find . -name '{{ backporter_source_package + "_*" + backporter_source_orig }}' | head -n 1 chdir={{ backporter_build_root }}
+  register: backporter_register_orig_package
+  when: backporter_register_source_download is defined and backporter_register_source_download.changed
+
+- name: Set source version based on .dsc version
+  shell: echo {{ backporter_register_dsc_version.stdout }} | sed -e 's/-.*$//'
+  register: backporter_register_orig_source_version
+  when: backporter_register_source_download is defined and backporter_register_source_download.changed
+
+- name: Create source directory name from gathered information
+  set_fact: backporter_register_build_source_dir='{{ backporter_source_package + "-" + backporter_register_orig_source_version.stdout }}'
+  when: backporter_register_source_download is defined and backporter_register_source_download.changed
+
+- name: Download package build dependencies
+  command: apt-get -yq build-dep {{ backporter_source_package }}
+  when: ((backporter_register_source_download is defined and backporter_register_source_download.changed) and
+         (backporter_skip_builddep is defined and not backporter_skip_builddep))
+
+- name: Update package changelog
+  environment:
+    DEBFULLNAME: '{{ backporter_maintainer }}'
+    DEBEMAIL: '{{ backporter_email }}'
+  shell: debchange --local {{ backporter_changelog_version }} --distribution {{ backporter_release }}-backports
+         --preserve "{{ backporter_changelog_message }}"
+         chdir={{ backporter_build_root }}/{{ backporter_register_build_source_dir }}
+  when: ((backporter_register_source_download is defined and backporter_register_source_download.changed) and
+         (backporter_changelog_version is defined and backporter_changelog_version))
+
+- name: Copy original tarball to add new version to the filename
+  command: cp {{ backporter_register_orig_package.stdout }}
+           {{ backporter_source_package + "_" + backporter_register_dsc_version.stdout + backporter_new_version + backporter_source_orig }}
+           chdir={{ backporter_build_root }}
+  when: backporter_register_source_download is defined and backporter_register_source_download.changed
+
+- name: Build package
+  shell: dpkg-buildpackage -us -uc
+         chdir={{ backporter_build_root }}/{{ backporter_register_build_source_dir }}
+  when: backporter_register_source_download is defined and backporter_register_source_download.changed
+
+- name: Get list of built packages to install
+  shell: find . -name '{{ backporter_install_packages | join("' -or -name '") }}' chdir={{ backporter_build_root }}
+  register: backporter_register_packages_to_install
+  when: (backporter_register_source_download is defined and backporter_register_source_download.changed) and
+        (backporter_install is defined and backporter_install)
+
+- name: Get list of built packages to upload
+  shell: find . -name '{{ backporter_upload_packages | join("' -or -name '") }}' chdir={{ backporter_build_root }}
+  register: backporter_register_packages_to_upload
+  when: (backporter_register_source_download is defined and backporter_register_source_download.changed)
+
+- name: Install prerequisites
+  apt: name={{ item }} state=latest install_recommends=no
+  with_items: backporter_prerequisites
+  when: backporter_prerequisites is defined and backporter_prerequisites
+
+- name: Install built packages
+  shell: dpkg -i {{ backporter_register_packages_to_install.stdout_lines | join(' ') }} chdir={{ backporter_build_root }}
+  register: backporter_register_built_packages_installed
+  when: (backporter_register_packages_to_install is defined and backporter_register_packages_to_install.changed) and
+        (backporter_install is defined and backporter_install)
+
+- name: Make sure upload storage exists on Ansible Controller
+  local_action: file path='{{ backporter_upload_storage }}' state='directory'
+  sudo: False
+  when: backporter_upload is defined and backporter_upload
+
+- name: Check if packages are present in reprepro storage
+  local_action: shell find . -name '{{ backporter_upload_packages | join("' -or -name '") }}' | head -n 1 chdir={{ backporter_upload_storage }}
+  register: backporter_register_reprepro_packages
+  sudo: False
+  when: backporter_upload is defined and backporter_upload
+  changed_when: False
+
+- name: Upload built .deb packages to reprepro storage
+  fetch:
+    src: '{{ backporter_build_root + "/" + item }}'
+    dest: '{{ backporter_upload_storage + "/" }}'
+    flat: True
+  sudo: False
+  with_items: backporter_register_packages_to_upload.stdout_lines
+  register: backporter_register_built_packages_uploaded
+  when: ((backporter_upload is defined and backporter_upload) and
+         (backporter_register_packages_to_upload is defined and backporter_register_packages_to_upload.stdout_lines) and
+         (backporter_register_reprepro_packages is defined and
+          item not in backporter_register_reprepro_packages.stdout_lines))
+
+- name: Make sure cache directory exists
+  file:
+    path: '{{ backporter_cache }}'
+    state: 'directory'
+    owner: 'root'
+    group: 'root'
+    mode: '0755'
+  when: ((backporter_register_packages_to_upload is defined and backporter_register_packages_to_upload.changed) and
+         (backporter_cache is defined and backporter_cache))
+
+- name: Copy built packages to temporary cache
+  command: cp -f {{ backporter_register_packages_to_upload.stdout_lines | join(" ") }} {{ backporter_cache + "/" }}
+  args:
+    chdir: '{{ backporter_build_root }}'
+  when: ((backporter_register_packages_to_upload is defined and backporter_register_packages_to_upload.changed) and
+         (backporter_cache is defined and backporter_cache))
+
+- name: Send mail to administrator about uploaded packages
+  mail: from="root@{{ ansible_fqdn }}" subject="{{ backporter_mail_subject }}"
+        to="{{ backporter_mail_to | join(',') }}" charset=utf8 body="{{ backporter_mail_body }}"
+  when: (backporter_register_built_packages_uploaded is defined and backporter_register_built_packages_uploaded.changed) and
+        (backporter_mail_to is defined and backporter_mail_to)
+

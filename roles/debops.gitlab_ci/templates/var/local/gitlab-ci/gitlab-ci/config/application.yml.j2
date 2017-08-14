@@ -1,0 +1,59 @@
+# This file is managed by Ansible, all changes will be lost
+
+defaults: &defaults
+{% if gitlab_ci_version | version_compare('5.4','<') %}
+  gitlab_server_urls:
+    # Replace with your gitlab server url
+    - '{{ gitlab_ci_gitlab_server }}'
+{% else %}
+  gitlab_server:
+    url: '{{ gitlab_ci_gitlab_server }}' # Replace with your gitlab server url
+    app_id: '{{ gitlab_ci_gitlab_app_id }}'
+    app_secret: '{{ gitlab_ci_gitlab_app_secret }}'
+{% endif %}
+
+  ## Gitlab CI settings  
+  gitlab_ci:
+    ## Web server settings
+    host: {{ gitlab_ci_domain[0] }}
+    port: 443
+    https: true
+
+    ## Email settings
+    # Email address used in the "From" field in mails sent by GitLab-CI
+    email_from: {{ gitlab_ci_email_from }}
+  
+    # Email address of your support contact (default: same as email_from)
+    support_email: {{ gitlab_ci_email_support }}
+  
+    # Default project notifications settings: 
+    #
+    # Send emails only on broken builds (default: true)
+    # all_broken_builds: true
+    # 
+    # Add committer to recipients list (default: false)
+    # add_committer: true
+    
+  gravatar:
+    enabled: true
+    plain_url: "http://www.gravatar.com/avatar/%{hash}?s=%{size}&d=mm"
+    ssl_url:   "https://secure.gravatar.com/avatar/%{hash}?s=%{size}&d=mm"
+
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+{% if gitlab_ci_version | version_compare('5.4','<') %}
+  gitlab_server_urls:
+    - 'http://demo.gitlab.com/'
+{% else %}
+  gitlab_server:
+    url: 'http://demo.gitlab.com/' 
+    app_id: 'id'
+    app_secret: 'secret'
+{% endif %}
+
+production:
+  <<: *defaults

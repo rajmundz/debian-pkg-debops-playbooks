@@ -1,0 +1,10 @@
+---
+
+- name: Restart gitlab-ci-runner
+  service:
+    name: 'gitlab-ci-runner'
+    state: 'restarted'
+  when: (ansible_local is defined and ansible_local.gitlab_ci_runner is defined and
+         ansible_local.gitlab_ci_runner.installed is defined and
+         ansible_local.gitlab_ci_runner.installed)
+

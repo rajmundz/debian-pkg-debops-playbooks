@@ -1,0 +1,18 @@
+---
+
+- name: Reload systemd daemon and enable snmpd.service
+  shell: systemctl daemon-reload ; systemctl enable snmpd.service
+  when: (ansible_local|d() and ansible_local.init|d() and
+          ansible_local.init == "systemd")
+
+- name: Restart snmpd
+  service:
+    name: 'snmpd'
+    enabled: True
+    state: 'restarted'
+
+- name: Restart lldpd
+  service:
+    name: 'lldpd'
+    state: 'restarted'
+
