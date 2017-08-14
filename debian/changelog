@@ -1,3 +1,11 @@
+debops-playbooks (0.2.9-1) UNRELEASED; urgency=medium
+
+  * Change Maintainer field
+  * Added Vcs-Git and Vcs-Browser fields
+  * New upstream version 0.2.9
+
+ -- Rajmund Zawiślak <rajmund.zawislak@gmail.com>  Mon, 14 Aug 2017 20:09:25 +0200
+
 debops-playbooks (0.2.8+git20160329.3286ccd-1) experimental; urgency=medium
 
   * Initial release (Closes: #819816).
