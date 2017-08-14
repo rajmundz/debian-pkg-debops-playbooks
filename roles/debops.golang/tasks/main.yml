@@ -1,8 +1,0 @@
----
-
-- name: Install Golang packages
-  apt:
-    name: 'golang'
-    state: 'latest'
-    install_recommends: False
-

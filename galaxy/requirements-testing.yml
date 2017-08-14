@@ -1,7 +1,16 @@
 - src: debops.apt
   version: testing
 
+- src: debops.apt_cacher_ng
+  version: testing
+
+- src: debops.apt_install
+  version: testing
+
 - src: debops.apt_preferences
+  version: testing
+
+- src: debops.atd
   version: testing
 
 - src: debops.auth
@@ -10,10 +19,19 @@
 - src: debops.backporter
   version: testing
 
+- src: debops.bootstrap
+  version: testing
+
 - src: debops.boxbackup
   version: testing
 
 - src: debops.console
+  version: testing
+
+- src: debops.core
+  version: testing
+
+- src: debops.cryptsetup
   version: testing
 
 - src: debops.debops
@@ -22,10 +40,16 @@
 - src: debops.dhcpd
   version: testing
 
-- src: debops.directories
+- src: debops.dhparam
   version: testing
 
 - src: debops.dnsmasq
+  version: testing
+
+- src: debops.docker
+  version: testing
+
+- src: debops.docker_gen
   version: testing
 
 - src: debops.dokuwiki
@@ -43,6 +67,12 @@
 - src: debops.etherpad
   version: testing
 
+- src: debops.fail2ban
+  version: testing
+
+- src: debops.fcgiwrap
+  version: testing
+
 - src: debops.ferm
   version: testing
 
@@ -55,10 +85,16 @@
 - src: debops.gitlab_ci_runner
   version: testing
 
+- src: debops.gitlab_runner
+  version: testing
+
 - src: debops.gitusers
   version: testing
 
 - src: debops.golang
+  version: testing
+
+- src: debops.grub
   version: testing
 
 - src: debops.hwraid
@@ -67,16 +103,46 @@
 - src: debops.ifupdown
   version: testing
 
+- src: debops.ipxe
+  version: testing
+
+- src: debops.iscsi
+  version: testing
+
 - src: debops.java
   version: testing
 
 - src: debops.kvm
   version: testing
 
+- src: debops.librenms
+  version: testing
+
+- src: debops.libvirt
+  version: testing
+
+- src: debops.libvirtd
+  version: testing
+
+- src: debops.logrotate
+  version: testing
+
+- src: debops.lvm
+  version: testing
+
 - src: debops.lxc
   version: testing
 
 - src: debops.mailman
+  version: testing
+
+- src: debops.mariadb
+  version: testing
+
+- src: debops.mariadb_server
+  version: testing
+
+- src: debops.memcached
   version: testing
 
 - src: debops.monit
@@ -124,6 +190,12 @@
 - src: debops.postgresql
   version: testing
 
+- src: debops.postgresql_server
+  version: testing
+
+- src: debops.preseed
+  version: testing
+
 - src: debops.radvd
   version: testing
 
@@ -136,7 +208,13 @@
 - src: debops.reprepro
   version: testing
 
+- src: debops.resources
+  version: testing
+
 - src: debops.rsnapshot
+  version: testing
+
+- src: debops.rstudio_server
   version: testing
 
 - src: debops.rsyslog
@@ -166,6 +244,9 @@
 - src: debops.smstools
   version: testing
 
+- src: debops.snmpd
+  version: testing
+
 - src: debops.sshd
   version: testing
 
@@ -178,8 +259,24 @@
 - src: debops.subnetwork
   version: testing
 
+- src: debops.swapfile
+  version: testing
+
 - src: debops.tcpwrappers
+  version: testing
+
+- src: debops.tftpd
+  version: testing
+
+- src: debops.tgt
+  version: testing
+
+- src: debops.tinc
+  version: testing
+
+- src: debops.unattended_upgrades
   version: testing
 
 - src: debops.users
   version: testing
+

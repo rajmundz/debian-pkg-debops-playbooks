@@ -1,7 +1,0 @@
----
-
-- name: Restart mailman
-  service:
-    name: 'mailman'
-    state: 'restarted'
-

@@ -1,5 +1,0 @@
----
-
-- name: Install Java Open JDK
-  apt: pkg=openjdk-{{ item }} state=present install_recommends=False
-  with_items: java_versions

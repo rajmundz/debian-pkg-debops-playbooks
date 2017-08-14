@@ -1,5 +1,0 @@
----
-
-- name: Apply ifupdown configuration
-  shell: test ! -x /tmp/ifupdown-apply-config || /tmp/ifupdown-apply-config
-
