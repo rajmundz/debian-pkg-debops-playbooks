@@ -1,0 +1,47 @@
+From: =?utf-8?q?Rajmund_Zawi=C5=9Blak?= <rajmund.zawislak@gmail.com>
+Date: Fri, 18 Aug 2017 15:24:57 +0200
+Subject: Remove git usage in build scripts
+
+---
+ Makefile                         | 6 ------
+ scripts/get_all_referenced_roles | 7 ++-----
+ 2 files changed, 2 insertions(+), 11 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 9ce58aa..b85fa0e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -6,14 +6,8 @@ default: all
+ 
+ all: galaxy
+ 
+-check: all fail-when-git-dirty
+-
+-fail-when-git-dirty:
+-	git diff --quiet && git diff --cached --quiet
+-
+ galaxy: galaxy/requirements galaxy/requirements-testing
+ 
+-
+ galaxy/requirements: galaxy/requirements.txt galaxy/requirements.yml
+ 
+ galaxy/requirements.txt: scripts/get_all_referenced_roles FORCE_MAKE
+diff --git a/scripts/get_all_referenced_roles b/scripts/get_all_referenced_roles
+index 9238287..8486bf2 100755
+--- a/scripts/get_all_referenced_roles
++++ b/scripts/get_all_referenced_roles
+@@ -3,12 +3,9 @@
+ ## @license GPL-3.0 <https://www.gnu.org/licenses/gpl-3.0.html>
+ 
+ ## Go into the directory where this script is stored.
+-cd "$( dirname "${BASH_SOURCE[0]}" )" || exit
+-
+-## Get all files, independently what the current subdirectory is.
+-cd "$(git rev-parse --show-toplevel)" || exit
++cd "$( dirname "${BASH_SOURCE[0]}" )/.." || exit
+ 
+ (
+-	git ls-files -z | xargs --null -I '{}' find '{}' -type f -name '*.yml' -print0 | xargs --null egrep --no-filename -e '^\s*-\s?role:\s?[^/]+$$' | sed --regexp-extended 's/.*?:\s+//'
++	 find -type f -name '*.yml' -print0 | xargs --null egrep --no-filename -e '^\s*-\s?role:\s?[^/]+$$' | sed --regexp-extended 's/.*?:\s+//'
+ 	test -r galaxy/requirements-manual.txt && grep --invert-match '^\s*#' galaxy/requirements-manual.txt
+ ) | sort -u
