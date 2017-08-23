@@ -1,3 +1,16 @@
-version=3
-opts="filenamemangle=s/(?:.*)?v?(\d[\d\.]+)\.tar\.gz/debops-playbooks-$1.tar.gz/" \
-https://github.com/debops/debops-playbooks/releases (?:.*/)?v?(\d[\d\.]+)\.tar\.gz
+version=4
+
+#opts=filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-playbooks-$1\.tar\.gz/ /
+# https://github.com/debops/debops-playbooks/releases .*/(\d\S+)\.tar\.gz 0.1
+#
+#opts="component=role-ansible-ntp,\
+#filenamemangle=s/(?:.*)?v?(\d[\d\.]+)\.tar\.gz/ansible-playbooks-$1.tar.gz/" \
+#https://github.com/debops/ansible-ntp/releases (?:.*/)?v?(\d[\d\.]+)\.tar\.gz ignore uupdate
+
+opts=\
+filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-playbooks_$1\.tar\.gz/ \
+  https://github.com/debops/debops-playbooks/releases .*/v?(\d\S+)\.tar\.gz 0.1
+
+opts=component=role-ansible-ntp,\
+filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-role-ansible-ntp_$1\.tar\.gz/ \
+  https://github.com/debops/ansible-ntp/releases .*/v?(\d\S+)\.tar\.gz ignore uupdate
