@@ -11,11 +11,11 @@ override_dh_installchangelogs:
 
 get-orig-source:
 	set -ex;\
-	gbp import-orig --uscan;\
+	gbp import-orig --no-pristine-tar --no-merge --uscan;\
 	git checkout upstream/latest-roles ;\
 	# TODO get roles from playbooks and add,delete submodules without checkout
 	git submodule foreach 'git fetch origin; git checkout $(git describe --tags `git rev-list --tags --max-count=1`)';
 	utag=`git describe --exact-match heads/upstream/latest | sed -e 's#^upstream/##'` ;\
 	git archive --format=tar --prefix=roles/ upstream/latest-roles  --output ../debops-playbooks_$$utag.orig-roles.tar.xz ;\
 	git checkout debian/master ;\
-	gbp import-orig --component=roles ../debian-playbooks_$$utag.orig-roles.tar.xz;\
+	gbp import-orig --component=roles ../debian-playbooks_$$utag.orig.tar.xz;\
