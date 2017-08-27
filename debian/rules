@@ -16,6 +16,6 @@ get-orig-source:
 	# TODO get roles from playbooks and add,delete submodules without checkout
 	git submodule foreach 'git fetch origin; git checkout $(git describe --tags `git rev-list --tags --max-count=1`)';
 	# TODO roles version from git
-	git archive --format=tar.xz --prefix=roles/ upstream/latest-roles  --output ../debian-playbooks.orig-roles.tar.xz ;\
+	git archive --format=tar --prefix=roles/ upstream/latest-roles  --output ../debops-playbooks.orig-roles.tar.xz ;\
 	git checkout debian/master ;\
 	gbp import-orig ../debian-playbooks.orig-roles.tar.xz;\
