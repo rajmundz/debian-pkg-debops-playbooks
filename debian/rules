@@ -10,7 +10,7 @@ override_dh_installchangelogs:
 	dh_installchangelogs debian/tmp/CHANGELOG
 
 get-orig-source:
-	set -e;\
+	set -ex;\
 	gbp import-orig --uscan;\
 	git checkout upstream/latest-roles ;\
 	# TODO get roles from playbooks and add,delete submodules without checkout
