@@ -1,5 +1,5 @@
 #!/usr/bin/make -f
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 %:
 	dh $@
@@ -8,3 +8,14 @@ override_dh_installchangelogs:
 	mkdir -v debian/tmp
 	pandoc -f rst -t plain -o debian/tmp/CHANGELOG CHANGELOG.rst
 	dh_installchangelogs debian/tmp/CHANGELOG
+
+get-orig-source:
+	set -e;\
+	gbp import-orig --uscan;\
+	git checkout upstream/latest-roles ;\
+	# TODO get roles from playbooks and add,delete submodules without checkout
+	git submodule foreach 'git fetch origin; git checkout $(git describe --tags `git rev-list --tags --max-count=1`)';
+	# TODO roles version from git
+	git archive --format=tar.xz --prefix=roles/ upstream/latest-roles  --output ../debian-playbooks.orig-roles.tar.xz ;\
+	git checkout debian/master ;\
+	gbp import-orig ../debian-playbooks.orig-roles.tar.xz;\
