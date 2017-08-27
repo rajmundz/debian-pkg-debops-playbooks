@@ -9,8 +9,5 @@ version=4
 
 opts=\
 filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-playbooks_$1\.tar\.gz/ \
-  https://github.com/debops/debops-playbooks/releases .*/v?(\d\S+)\.tar\.gz 0.1
+  https://github.com/debops/debops-playbooks/releases .*/v?(\d\S+)\.tar\.gz debian uupdate
 
-opts=component=role-ansible-ntp,\
-filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-role-ansible-ntp_$1\.tar\.gz/ \
-  https://github.com/debops/ansible-ntp/releases .*/v?(\d\S+)\.tar\.gz ignore uupdate
