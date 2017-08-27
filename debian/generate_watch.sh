@@ -10,12 +10,13 @@ echo
 	test -r galaxy/requirements-manual.txt && grep --invert-match '^\s*#' galaxy/requirements-manual.txt
 ) | sort -u | sed 's#debops\.#ansible-#' | while read line ; do
    echo 'opts=component=role-'$line',\'
+   echo ' uversionmangle=s/_/-/g,\'
    echo ' filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-role-'$line'_$1\.tar\.gz/ \'
-   echo ' https://github.com/debops/'$line'/releases .*/v?(\d\S+)\.tar\.gz ignore'
+   echo ' https://github.com/debops/'$line'/tags .*/v?(\d\S+)\.tar\.gz ignore'
    echo 
 done
 
 echo 'opts=\
 filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/debops-playbooks_$1\.tar\.gz/ \
-  https://github.com/debops/debops-playbooks/releases .*/v?(\d\S+)\.tar\.gz 0.1 uupdate'
+  https://github.com/debops/debops-playbooks/tags .*/v?(\d\S+)\.tar\.gz 0.1 uupdate'
 
